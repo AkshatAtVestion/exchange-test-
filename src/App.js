@@ -115,6 +115,7 @@ function App() {
         </form>
         {buyingError && <p>Error: {buyingError}</p>}
         {transactionStatus && <p>{transactionStatus}</p>}
+        <Analytics />
       </header>
     </div>
   );
