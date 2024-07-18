@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { Web3Provider } from "@ethersproject/providers";
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import Exchange_abi from "./Exchange_abi.json";
+import { Analytics } from "@vercel/analytics/react"
 
 const providerOptions = {
   walletlink: {
