@@ -33,6 +33,7 @@ function App() {
   const [cost, setCost] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [transactionDetails, setTransactionDetails] = useState(['', '']);
+  const [newTransaction, setNewTransaction] = useState(false);
   const contractAddress = "0xEB4d6210e4076aF5347Ab98625b5Bc0C7E71cFB7";
 
   useEffect(() => {
@@ -55,7 +56,7 @@ function App() {
         contract.off("tokensBought", handleTokensBought);
       };
     }
-  }, [contract]);
+  }, [newTransaction]);
 
   useEffect(() => {
     let interval;
@@ -172,6 +173,8 @@ function App() {
       setTokensToBuy('');
       const updatedSupply = await getTotalSupply(contract);
       setTotalSupply(updatedSupply);
+      await getWalletBalance(provider, signer);
+      setNewTransaction(true);
       //setTransactionStatus('transaction successful');
     } catch (error) {
       console.error("error buying tokens: ", error);
