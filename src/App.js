@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
+import './design.css';
 import Web3Modal from "web3modal";
 import { ethers } from "ethers";
 import { Web3Provider } from "@ethersproject/providers";
@@ -21,7 +21,7 @@ function App() {
   const [provider, setProvider] = useState(null);
   const [connected, setConnected] = useState(false);
   const [signer, setSigner] = useState(null);
-  const [balance, setBalane] = useState('');
+  const [balance, setBalance] = useState('');
   const [contract, setContract] = useState(null);
   const [VESprice, setVESprice] = useState(null);
   const [rate, setRate] = useState(null);
@@ -31,8 +31,8 @@ function App() {
   const [displayedPrice, setDisplayedPrice] = useState('rate');
   const [totalSupply, setTotalSupply] = useState('');
   const [cost, setCost] = useState('');
-  const [inputValue, setInputValue] = useState('')
-  const [transactionDetails, setTransactionDetails] = useState('', '');
+  const [inputValue, setInputValue] = useState('');
+  const [transactionDetails, setTransactionDetails] = useState(['', '']);
   const contractAddress = "0xEB4d6210e4076aF5347Ab98625b5Bc0C7E71cFB7";
 
   useEffect(() => {
@@ -46,7 +46,7 @@ function App() {
       const handleTokensBought = (buyer, tokensBought) => {
         setTransactionStatus('Transaction successful!');
         console.log("transaction details: ", buyer, Number(tokensBought));
-        setTransactionDetails(buyer, tokensBought);
+        setTransactionDetails([buyer, tokensBought.toString()]);
       };
 
       contract.on("tokensBought", handleTokensBought);
@@ -81,35 +81,45 @@ function App() {
       setSigner(signer);
       setContract(Contract);
       setConnected(true);
-      const rateValue = await getRate(Contract);
-      const priceValue = await getPrice(Contract);
+
+      const [rateValue, priceValue, supply] = await Promise.all([
+        getRate(Contract),
+        getPrice(Contract),
+        getTotalSupply(Contract)
+      ]);
+      // const rateValue = await getRate(Contract);
+      // const priceValue = await getPrice(Contract);
       setRate(rateValue);
       setVESprice(priceValue);
-      const supply = await getTotalSupply(Contract);
+      // const supply = await getTotalSupply(Contract);
       console.log(supply);
       setTotalSupply(supply);
-      getWalletBalance(web3ModalProvider);
+      await getWalletBalance(web3ModalProvider, signer);
     } catch (error) {
       console.error(error);
     }
   }
 
-  async function getWalletBalance(provider) {
+  async function getWalletBalance(Provider, Signer) {
+    if (!Provider || !Signer) {
+      console.log('signer not there');
+      return;
+    }
+
     try {
-      const address = await signer.getAddress();
-      const balance = await provider.getBalance(address);
+      const address = await Signer.getAddress();
+      const balance = await Provider.getBalance(address);
       const balanceInEther = parseFloat(balance.toString() / (10 ** 18));
-      setBalane(balanceInEther);
+      setBalance(balanceInEther);
+      console.log(balance);
     } catch (error) {
       console.error("error getting the balance: ", error);
     }
-
   }
 
   const getPrice = async (contract) => {
     try {
       let currentPrice = await contract.getPrice();
-      //return currentPrice.toString();
       let priceInEth = Number(currentPrice) / 10 ** 18;
       return priceInEth;
     } catch (error) {
@@ -134,12 +144,11 @@ function App() {
       setTokensToBuy(tokensToBuy);
       let amount = await contract.getAmount(tokensToBuy);
       console.log('calculating amount to pay...')
-      let amountToPay = Number(amount);
+      let amountToPay = (Number(amount) / 10 ** 18);
       setCost(amountToPay);
       console.log(amountToPay);
-      //return amount; 
     } catch (error) {
-      console.error('error getting the amoount: ', error);
+      console.error('error getting the amount: ', error);
     }
   }
 
@@ -163,8 +172,7 @@ function App() {
       setTokensToBuy('');
       const updatedSupply = await getTotalSupply(contract);
       setTotalSupply(updatedSupply);
-      setTransactionStatus('transaction successful');
-
+      //setTransactionStatus('transaction successful');
     } catch (error) {
       console.error("error buying tokens: ", error);
       setBuyingError(error.message);
@@ -175,11 +183,13 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
+        <div className="wallet-container">
+          <button className="connect-wallet-btn" onClick={connectWallet}>
+            {connected ? 'Wallet Connected!' : 'Connect Wallet'}
+          </button>
+          {balance && <p className="wallet-balance">Balance: {balance} ETH</p>}
+        </div>
         <h1>VES</h1>
-        <button onClick={connectWallet}>
-          {connected ? 'Wallet Connected!' : 'Connect Wallet'}
-        </button>
-        {balance && <p>{balance} ETH</p>}
         {connected && <p>VES price = {displayedPrice === 'rate' ? `$ ${rate}` : `${VESprice} ETH`}</p>}
         {connected && <p>Total Supply = {totalSupply}</p>}
         <form onSubmit={handleBuyTokens}>
@@ -191,14 +201,15 @@ function App() {
             required />
           <button type='submit'>Buy</button>
         </form>
-        {cost && <p>{cost} Wei</p>}
-        {buyingError && <p>Error: {buyingError}</p>}
-        {transactionStatus && <p>{transactionStatus}</p>}
-        {transactionDetails && <p>{transactionDetails[1]} || {transactionDetails[2]}</p>}
+        {cost && <p>Total: {cost} ETH</p>}
+        {buyingError && <p className="error">Error: {buyingError}</p>}
+        {transactionStatus && <p className={transactionStatus === 'transaction successful' ? "success" : "error"}>{transactionStatus}</p>}
+        {transactionDetails && <p>{transactionDetails[0]} || {transactionDetails[1]}</p>}
         <Analytics />
       </header>
     </div>
   );
+
 }
 
 export default App;
